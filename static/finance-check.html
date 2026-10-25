@@ -1,0 +1,925 @@
+<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><title>Pre-evaluate your finances · AutoMatch</title><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#0a0a0a;color:#f3f3f1}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: workspace with the deal and documents on the left and the live result on the right; tabs switch between buyer and dealer desk views */
+:root{
+  --bg:#0a0a0a; --surface:#121212; --surface-2:#181818; --ink:#f3f3f1; --ink-2:#9a9a96; --line:#262626;
+  --accent:#3b6df6; --accent-ink:#ffffff;
+  --good:#2ecc71; --good-bg:#10231a; --warn:#f5a623; --warn-bg:#2a1f0b; --bad:#e5484d; --bad-bg:#2a1213;
+  --font-display:'Inter',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-mono:'Inter',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.2}
+h1{font-size:1.6rem;font-weight:700}
+h2{font-size:1.1rem;font-weight:700}
+h3{font-size:.95rem;font-weight:600}
+p{margin:0}
+.mono,.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-2)}
+.small{font-size:.85rem}
+.label-up{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+header .sub{max-width:60ch}
+.tabs{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:10px}
+.tabs button{border:0;background:transparent;color:var(--ink-2);font:inherit;font-weight:500;padding:8px 14px;border-radius:7px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label.btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.banner{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--warn-bg);color:var(--warn);padding:10px 14px;border-radius:8px;font-size:.9rem}
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card.sticky{position:sticky;top:12px}
+@media (max-width:860px){.card.sticky{position:static}}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.8rem;color:var(--ink-2);font-weight:500}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;width:100%;min-width:0}
+input.mono{font-family:var(--font-mono)}
+textarea{min-height:64px;resize:vertical}
+.btn,button.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:inherit;font-weight:500;font-size:.9rem;padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.none{background:var(--surface-2);color:var(--ink-2)}
+.docs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.doc{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:12px 8px;border-top:1px solid var(--line);align-items:center;border-radius:8px}
+.doc:first-child{border-top:0}
+.doc.drag{background:var(--surface-2)}
+.doc .meta{min-width:0}
+.doc .name{font-weight:600}
+.doc .note{font-size:.82rem;color:var(--ink-2);overflow-wrap:anywhere}
+.doc .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.autofilled{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.auto-tag{font-size:.74rem;color:var(--accent)}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+th{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);border-top:0}
+td.r,th.r{text-align:right}
+.band{border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.band .big{font-family:var(--font-display);font-size:1.5rem;font-weight:700;line-height:1.15}
+.band.good{background:var(--good-bg);color:var(--good)}
+.band.warn{background:var(--warn-bg);color:var(--warn)}
+.band.bad{background:var(--bad-bg);color:var(--bad)}
+.band.none{background:var(--surface-2);color:var(--ink-2)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px}
+.kv div:nth-child(even){text-align:right}
+.bar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.fixes{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.fixes li{padding-left:12px;border-left:3px solid var(--accent)}
+.fixes li.flag{border-left-color:var(--warn)}
+.fixes b{display:block}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.checks li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;padding:9px 0;border-top:1px solid var(--line);align-items:baseline}
+.checks li:first-child{border-top:0}
+.checks .note{grid-column:2;font-size:.83rem;color:var(--ink-2);overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.note-box{background:var(--surface-2);border-radius:8px;padding:10px 12px;font-size:.88rem}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .3s}}
+</style>
+
+<style>
+.am-back{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1120px;margin:0 auto 16px;font-size:.9rem}
+.am-back a{color:var(--ink-2);text-decoration:none;font-weight:500}
+.am-back a:hover{color:var(--ink)}
+.am-back .am-logo{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:2rem;letter-spacing:-.5px;color:var(--ink)}
+.am-back .am-logo em{color:var(--accent)}
+
+/* AutoMatch dark theme details */
+h1,h2,h3{letter-spacing:-.01em}
+.card{border-radius:14px}
+.tabs{background:var(--surface);border:1px solid var(--line);border-radius:999px}
+.tabs button{border-radius:999px}
+.tabs button[aria-selected="true"]{background:var(--accent);color:#fff;box-shadow:none}
+.btn,button.btn{border-radius:999px;border-color:#333;background:transparent}
+.btn:hover{background:#1a1a1a}
+.btn.primary{background:#fff;color:#0a0a0a;border-color:#fff;font-weight:600}
+.btn.primary:hover{background:#e9e9e9}
+.btn:disabled:hover{background:#fff}
+.pill{border:1px solid currentColor}
+.pill.none{border-color:var(--line)}
+.band{border:1px solid currentColor}
+.band.none{border-color:var(--line)}
+input,select,textarea{background:#0f0f0f;border-color:#333;border-radius:10px}
+input:focus,select:focus,textarea:focus{border-color:#5a5a5a}
+.banner{background:#1c170a;color:#d9c48c;border:1px solid #2d2510}
+</style>
+<div class="am-back"><a href="/">&larr; Back to AutoMatch</a><a class="am-logo" href="/" aria-label="AutoMatch home">autom<em>a</em>tch</a></div>
+<div class="wrap">
+  <header>
+    <div class="sub" style="display:flex;flex-direction:column;gap:6px">
+      <div class="label-up">Dealer-side vehicle finance pre-qualification</div>
+      <h1>Finance File Check</h1>
+      <p class="muted small">Collects the buyer's documents, reads the bank statement, and shows a likely, borderline or unlikely band with what to fix before the bank's own assessment. Everything runs in this page. Nothing is uploaded anywhere.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Views">
+      <button role="tab" id="tab-buyer" aria-selected="true" data-view="buyer">Buyer</button>
+      <button role="tab" id="tab-dealer" aria-selected="false" data-view="dealer">Dealer desk</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner">
+    <span id="banner-text"></span>
+    <span class="btn-row">
+      <button class="btn" id="load-clean" type="button">Clean sample</button>
+      <button class="btn" id="load-flags" type="button">Sample with red flags</button>
+      <button class="btn" id="clear-all" type="button">Clear everything</button>
+    </span>
+  </div>
+
+  <!-- BUYER -->
+  <section id="view-buyer" class="cols" aria-labelledby="tab-buyer">
+    <div class="stack">
+      <div class="card">
+        <h2>1 · The deal</h2>
+        <div class="form-grid">
+          <div class="field"><label for="idno">SA ID number</label><input id="idno" class="mono" inputmode="numeric" maxlength="15" autocomplete="off"><span class="small" id="id-msg"></span></div>
+          <div class="field"><label for="net">Take-home pay per month (R)</label><input id="net" class="mono" type="number" min="0" step="100"></div>
+          <div class="field"><label for="gross">Gross pay per month (R)</label><input id="gross" class="mono" type="number" min="0" step="100"></div>
+          <div class="field"><label for="debt">Other monthly instalments (R)</label><input id="debt" class="mono" type="number" min="0" step="50"></div>
+          <div class="field"><label for="price">Vehicle price (R)</label><input id="price" class="mono" type="number" min="0" step="1000"></div>
+          <div class="field"><label for="deposit">Deposit (R)</label><input id="deposit" class="mono" type="number" min="0" step="1000"></div>
+          <div class="field"><label for="tv">Trade-in value (R)</label><input id="tv" class="mono" type="number" min="0" step="1000"></div>
+          <div class="field"><label for="settle">Trade-in settlement owed (R)</label><input id="settle" class="mono" type="number" min="0" step="1000"></div>
+          <div class="field"><label for="term">Term</label>
+            <select id="term"><option value="36">36 months</option><option value="48">48 months</option><option value="60">60 months</option><option value="72" selected>72 months</option><option value="84">84 months</option></select></div>
+          <div class="field"><label for="rate">Interest rate (% a year)</label><input id="rate" class="mono" type="number" min="0" max="40" step="0.25" value="12.5"></div>
+        </div>
+        <p class="small muted">The interest rate is an estimate you set. Banks price each buyer on their own risk profile.</p>
+      </div>
+
+      <div class="card">
+        <h2>2 · Documents</h2>
+        <ul class="docs" id="doc-list"></ul>
+      </div>
+
+      <div class="card" id="stmt-card">
+        <h2>3 · What the statement shows</h2>
+        <div id="stmt-body" class="muted small">Upload a bank statement (a CSV, or a PDF with selectable text) and it is read here. A CSV needs the columns Date, Description and Amount (or Debit and Credit), with Balance if you have it.</div>
+      </div>
+    </div>
+
+    <aside class="stack" aria-live="polite">
+      <div class="card sticky" id="buyer-result"></div>
+    </aside>
+  </section>
+
+  <!-- DEALER -->
+  <section id="view-dealer" hidden aria-labelledby="tab-dealer">
+    <div class="stack" id="dealer-body"></div>
+  </section>
+
+</div>
+
+<script>
+// ==LOGIC==
+const fmt = n => 'R ' + Math.round(n).toLocaleString('en-ZA');
+const pct = n => Math.round(n * 100) + '%';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DEBT_RE = /loan|finance|bond|instal|credit card|store acc|\bvaf\b|\bmfc\b|wesbank|truworths|edgars|lewis|homechoice|\bjet\b|mr price/i;
+const GAMBLE_RE = /\bbet|betway|casino|lotto|sportingbet|hollywoodbets|yesplay|powerball|luckystar/i;
+const BOUNCE_RE = /unpaid|returned|insufficient|dishonou?r|rejected|\brd\b|reversal fee/i;
+const INS_RATE = 0.004; // placeholder: monthly insurance as a share of vehicle price
+const median = a => { const s = a.slice().sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const monthKey = d => d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
+
+function luhnValid(s) {
+  let sum = 0;
+  for (let i = 0; i < s.length; i++) {
+    let d = +s[s.length - 1 - i];
+    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
+function makeSampleID() {
+  const base = '940312' + '5123' + '0' + '8';
+  for (let z = 0; z < 10; z++) if (luhnValid(base + z)) return base + z;
+}
+function checkID(raw, now) {
+  const s = String(raw || '').replace(/\s/g, '');
+  if (!s) return null;
+  if (!/^\d{13}$/.test(s)) return { ok: false, msg: 'An SA ID number has 13 digits.' };
+  now = now || new Date();
+  const yy = +s.slice(0, 2), mm = +s.slice(2, 4), dd = +s.slice(4, 6);
+  const year = yy > now.getUTCFullYear() % 100 ? 1900 + yy : 2000 + yy;
+  const dob = new Date(Date.UTC(year, mm - 1, dd));
+  if (dob.getUTCFullYear() !== year || dob.getUTCMonth() !== mm - 1 || dob.getUTCDate() !== dd) return { ok: false, msg: 'The birth date inside this number is not a real date.' };
+  if (!luhnValid(s)) return { ok: false, msg: 'The check digit does not match. Re-check the number.' };
+  let age = now.getUTCFullYear() - year;
+  if (now.getUTCMonth() < mm - 1 || (now.getUTCMonth() === mm - 1 && now.getUTCDate() < dd)) age--;
+  return { ok: true, age, msg: 'Valid number. Age ' + age + '.' };
+}
+
+function parseCSVRows(text) {
+  const head = text.split(/\r?\n/, 1)[0] || '';
+  const delim = (head.match(/;/g) || []).length > (head.match(/,/g) || []).length ? ';' : ',';
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.some(x => x.trim() !== '')) rows.push(row); row = []; }
+    else cur += c;
+  }
+  row.push(cur); if (row.some(x => x.trim() !== '')) rows.push(row);
+  return rows;
+}
+function parseMoney(v) {
+  if (v === undefined || v === null) return null;
+  let s = String(v).trim();
+  if (!s) return null;
+  let neg = false;
+  if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); }
+  if (/-$/.test(s)) { neg = true; s = s.slice(0, -1); }
+  s = s.replace(/[Rr\s ]/g, '');
+  if (/^-/.test(s)) { neg = !neg || true; s = s.slice(1); }
+  if (/,\d{1,2}$/.test(s) && !/\./.test(s)) s = s.replace(',', '.'); else s = s.replace(/,/g, '');
+  const n = parseFloat(s);
+  if (isNaN(n)) return null;
+  return neg ? -n : n;
+}
+function parseDate(v) {
+  const s = String(v || '').trim();
+  let m = s.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  m = s.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if (m) return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
+  return null;
+}
+function parseStatement(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return { ok: false, error: 'The file has no transaction rows.' };
+  const h = rows[0].map(x => x.trim().toLowerCase());
+  const find = re => h.findIndex(x => re.test(x));
+  const iDate = find(/date/), iDesc = find(/desc|narr|detail|reference|transaction/);
+  let iAmt = find(/^amount|^value/), iDeb = find(/debit|money out|withdraw/), iCre = find(/credit|money in|deposit/), iBal = find(/balance/);
+  if (iDate < 0 || iDesc < 0 || (iAmt < 0 && iDeb < 0 && iCre < 0)) return { ok: false, error: 'Could not find Date, Description and Amount (or Debit and Credit) columns in the first row.' };
+  const tx = [];
+  for (let r = 1; r < rows.length; r++) {
+    const c = rows[r];
+    const d = parseDate(c[iDate]);
+    if (!d) continue;
+    let amt = null;
+    if (iAmt >= 0) amt = parseMoney(c[iAmt]);
+    else { const dr = parseMoney(c[iDeb]) || 0, cr = parseMoney(c[iCre]) || 0; amt = cr - Math.abs(dr); }
+    if (amt === null) continue;
+    tx.push({ d, desc: String(c[iDesc] || '').trim(), amt, bal: iBal >= 0 ? parseMoney(c[iBal]) : null });
+  }
+  if (tx.length < 5) return { ok: false, error: 'Fewer than 5 readable transactions were found.' };
+  tx.sort((a, b) => a.d - b.d);
+  return { ok: true, tx };
+}
+function analyzeStatement(tx) {
+  const monthsSet = new Set(tx.map(t => monthKey(t.d)));
+  const months = [...monthsSet].sort();
+  const first = tx[0].d, last = tx[tx.length - 1].d;
+  const days = Math.round((last - first) / 86400000) + 1;
+  const need = Math.max(2, Math.ceil(months.length * 0.66));
+  const norm = s => s.toLowerCase().replace(/\d+/g, '').replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const group = pred => {
+    const g = {};
+    tx.filter(pred).forEach(t => {
+      const k = norm(t.desc) || 'unnamed';
+      const e = g[k] || (g[k] = { name: t.desc, byMonth: {}, count: {} });
+      const mk = monthKey(t.d);
+      e.byMonth[mk] = (e.byMonth[mk] || 0) + Math.abs(t.amt);
+      e.count[mk] = (e.count[mk] || 0) + 1;
+    });
+    return Object.values(g).map(e => {
+      const sums = Object.values(e.byMonth);
+      const med = median(sums);
+      return { name: e.name, months: sums.length, median: med, variation: med ? (Math.max(...sums) - Math.min(...sums)) / med : 0, maxPerMonth: Math.max(...Object.values(e.count)) };
+    });
+  };
+  const credits = group(t => t.amt > 0).filter(g => g.months >= need && g.median >= 1500).sort((a, b) => b.median - a.median);
+  const salary = credits[0] || null;
+  const recurring = group(t => t.amt < 0).filter(g => g.months >= need && g.maxPerMonth <= 2 && g.variation <= 0.1 && g.median >= 50)
+    .map(g => ({ name: g.name, median: g.median, months: g.months, debt: DEBT_RE.test(g.name) }))
+    .sort((a, b) => b.median - a.median);
+  const hasBalance = tx.some(t => t.bal !== null);
+  return {
+    months, days, first, last, salary, recurring, hasBalance, txCount: tx.length,
+    gambling: tx.filter(t => t.amt < 0 && GAMBLE_RE.test(t.desc)).length,
+    bounced: tx.filter(t => BOUNCE_RE.test(t.desc)).length,
+    overdraftRows: hasBalance ? tx.filter(t => t.bal !== null && t.bal < 0).length : 0
+  };
+}
+function makeSampleCSV(variant, now) {
+  now = now || new Date();
+  const rows = []; let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const iso = (y, m, d) => y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  [3, 2, 1].forEach((k, i) => {
+    const dt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - k, 1));
+    const y = dt.getUTCFullYear(), m = dt.getUTCMonth();
+    const add = (d, desc, amt) => rows.push({ date: iso(y, m, d), desc, amt });
+    add(1, 'EFT RENT PAYMENT', -9500);
+    add(1, 'DEBIT ORDER VODACOM CONTRACT', -599);
+    add(2, 'DEBIT ORDER VIRGIN ACTIVE', -489);
+    add(3, 'DEBIT ORDER CAPITEC LOAN INSTALMENT', -1200);
+    add(3, 'DEBIT ORDER TRUWORTHS STORE ACC', -650);
+    add(5, 'NETFLIX.COM', -199);
+    const shops = ['WOOLWORTHS', 'CHECKERS', 'PICK N PAY', 'SHELL ULTRA CITY', 'ENGEN 1STOP', 'CLICKS', 'UBER EATS'];
+    for (let j = 0; j < 9; j++) add(4 + j * 2 + (j % 2), 'POS PURCHASE ' + shops[Math.floor(rnd() * shops.length)], -Math.round(150 + rnd() * 650));
+    if (variant === 'flags') {
+      add(8, 'SPORTINGBET DEPOSIT', -(500 + Math.round(rnd() * 700)));
+      add(15, 'HOLLYWOODBETS', -800);
+      if (i === 1) add(19, 'UNPAID DEBIT ORDER FEE INSUFFICIENT FUNDS', -45);
+    }
+    add(25, 'SALARY ACME LOGISTICS', 28400);
+  });
+  rows.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  let bal = variant === 'flags' ? 9000 : 26000;
+  const lines = ['Date,Description,Amount,Balance'];
+  rows.forEach(r => { bal += r.amt; lines.push(r.date + ',' + r.desc + ',' + r.amt.toFixed(2) + ',' + bal.toFixed(2)); });
+  return lines.join('\n');
+}
+
+function pmtFactor(rate, n) { const r = rate / 100 / 12; return r === 0 ? 1 / n : r / (1 - Math.pow(1 + r, -n)); }
+function expenseAllowance(gross) { return Math.max(3500, 0.30 * gross); } // placeholder for the NCR minimum expense norms table
+function levelOf(ratio, dti) { if (ratio <= 0.5 && dti <= 0.55) return 2; if (ratio <= 0.75 && dti <= 0.7) return 1; return 0; }
+const ceil1000 = n => Math.ceil(n / 1000) * 1000;
+
+function computeModel(v, stmt) {
+  const detNet = stmt && stmt.salary ? stmt.salary.median : 0;
+  const net = detNet || v.net;
+  if (!(net > 0) || !(v.price > 0)) return null;
+  const gross = v.gross > 0 ? v.gross : net * 1.25;
+  const debtItems = stmt ? stmt.recurring.filter(r => r.debt) : [];
+  const detDebt = debtItems.reduce((a, r) => a + r.median, 0);
+  const baseExisting = Math.max(v.debt || 0, detDebt);
+  const expenses = expenseAllowance(gross);
+  const flagged = !!(stmt && (stmt.bounced > 0 || stmt.gambling > 0 || stmt.overdraftRows > 0));
+  const calc = (o) => {
+    o = o || {};
+    const price = o.price !== undefined ? o.price : v.price;
+    const deposit = o.deposit !== undefined ? o.deposit : (v.deposit || 0);
+    const term = o.term || v.term;
+    const existing = o.existing !== undefined ? o.existing : baseExisting;
+    const f = pmtFactor(v.rate, term);
+    const financed = Math.max(0, price - deposit - (v.tv || 0) + (v.settle || 0));
+    const inst = f * financed, ins = INS_RATE * price, cost = inst + ins;
+    const disc = net - existing - expenses;
+    const ratio = disc > 0 ? cost / disc : Infinity;
+    const dti = (existing + cost) / net;
+    let level = levelOf(ratio, dti);
+    if (flagged) level = Math.max(0, level - 1);
+    return { f, financed, inst, ins, cost, disc, ratio, dti, level, existing };
+  };
+  const base = calc();
+  const maxPrice = (ratioCap, dtiCap) => {
+    const f = pmtFactor(v.rate, v.term);
+    const cap = Math.min(ratioCap * base.disc, dtiCap * net - baseExisting);
+    if (!(cap > 0)) return 0;
+    const P = (cap + f * ((v.deposit || 0) + (v.tv || 0) - (v.settle || 0))) / (f + INS_RATE);
+    return Math.max(0, Math.floor(P / 1000) * 1000);
+  };
+  const maxLikely = maxPrice(0.5, 0.55), maxBorder = maxPrice(0.75, 0.7);
+  const fixes = [];
+  if (base.level < 2) {
+    const capL = Math.min(0.5 * base.disc, 0.55 * net - baseExisting);
+    if (capL > base.ins) {
+      const extra = base.financed - (capL - base.ins) / base.f;
+      if (extra > 0) fixes.push({ title: 'Add ' + fmt(ceil1000(extra)) + ' to the deposit', detail: 'That brings the instalment down to about ' + fmt(base.inst - ceil1000(extra) * base.f) + ' and puts income and debt in the likely range.' });
+    }
+    if (maxLikely < v.price) fixes.push({ title: 'Look at vehicles up to ' + fmt(maxLikely), detail: 'Largest price that fits the likely range with this deposit, trade-in and term.' });
+    if (v.term < 72) { const c = calc({ term: 72 }); if (c.level > base.level) fixes.push({ title: 'Stretch the term to 72 months', detail: 'The instalment drops to about ' + fmt(c.inst) + '. It costs more interest over the whole term.' }); }
+    if (debtItems.length) {
+      const top = debtItems[0], c = calc({ existing: Math.max(0, baseExisting - top.median) });
+      if (c.level > base.level) fixes.push({ title: 'Settle ' + top.name.toLowerCase().replace(/^debit order /, '') + ' (' + fmt(top.median) + ' a month)', detail: 'Removing it moves the share of left-over income used from ' + pct(base.ratio) + ' to ' + pct(c.ratio) + '.' });
+    }
+  }
+  if ((v.tv || 0) > 0 && v.settle > v.tv) fixes.push({ title: 'Trade-in is ' + fmt(v.settle - v.tv) + ' underwater', detail: 'The shortfall is added to the new loan. Paying it down first removes it.' });
+  if (stmt && stmt.bounced > 0) fixes.push({ flag: true, title: 'Returned or unpaid debits on the statement', detail: stmt.bounced + ' line' + (stmt.bounced > 1 ? 's' : '') + '. A few clean months before applying would help.' });
+  if (stmt && stmt.gambling > 0) fixes.push({ flag: true, title: 'Gambling transactions on the statement', detail: stmt.gambling + ' line' + (stmt.gambling > 1 ? 's' : '') + '. Some lenders weigh these.' });
+  if (stmt && stmt.overdraftRows > 0) fixes.push({ flag: true, title: 'The account went into overdraft', detail: stmt.overdraftRows + ' statement rows show a negative balance.' });
+  return {
+    net, netSource: detNet ? 'statement' : 'declared', gross, existing: baseExisting, expenses, disc: base.disc,
+    financed: base.financed, inst: base.inst, ins: base.ins, cost: base.cost, ratio: base.ratio, dti: base.dti,
+    level: base.level, flagged, maxLikely, maxBorder, fixes: fixes.slice(0, 6)
+  };
+}
+// With income and debts known but no vehicle price yet: the most that looks affordable. Same rules as computeModel.
+function affordCaps(v, stmt) {
+  const net = (stmt && stmt.salary ? stmt.salary.median : 0) || v.net;
+  if (!(net > 0)) return null;
+  const gross = v.gross > 0 ? v.gross : net * 1.25;
+  const detDebt = stmt ? stmt.recurring.filter(r => r.debt).reduce((a, r) => a + r.median, 0) : 0;
+  const existing = Math.max(v.debt || 0, detDebt);
+  const disc = net - existing - expenseAllowance(gross);
+  const f = pmtFactor(v.rate, v.term);
+  const cap = (rc, dc) => {
+    const c = Math.min(rc * disc, dc * net - existing);
+    if (!(c > 0)) return 0;
+    return Math.max(0, Math.floor(((c + f * ((v.deposit || 0) + (v.tv || 0) - (v.settle || 0))) / (f + INS_RATE)) / 1000) * 1000);
+  };
+  return { likely: cap(0.5, 0.55), border: cap(0.75, 0.7) };
+}
+function buildChecks(v, stmt, idRes, found) {
+  const c = [];
+  c.push({ label: 'ID number is valid', state: idRes ? (idRes.ok ? 'pass' : 'fail') : 'unknown', note: idRes ? idRes.msg : 'No ID number entered.' });
+  const seen = found && found.idno ? Object.entries(found.idno) : [];
+  if (seen.length >= 2) {
+    const names = { id: 'ID document', licence: 'licence', payslip: 'payslip' };
+    const same = new Set(seen.map(x => x[1])).size === 1;
+    c.push({ label: 'ID number matches across documents', state: same ? 'pass' : 'fail', note: same ? seen.length + ' documents show the same number.' : seen.map(x => (names[x[0]] || x[0]) + ' ' + x[1]).join(', ') + '.' });
+  }
+  if (!stmt) { c.push({ label: 'Statement read automatically', state: 'unknown', note: 'No readable bank statement loaded.' }); return c; }
+  c.push({ label: 'Statement covers three months', state: stmt.days >= 80 ? 'pass' : 'warn', note: stmt.days + ' days across ' + stmt.months.length + ' calendar months.' });
+  c.push({ label: 'Recurring salary found', state: stmt.salary ? 'pass' : 'fail', note: stmt.salary ? fmt(stmt.salary.median) + ' a month in ' + stmt.salary.months + ' months.' : 'No credit repeats each month.' });
+  if (stmt.salary) {
+    c.push({ label: 'Salary is steady', state: stmt.salary.variation <= 0.1 ? 'pass' : 'warn', note: 'Month to month variation ' + pct(stmt.salary.variation) + '.' });
+    if (v.net > 0) {
+      const diff = Math.abs(v.net - stmt.salary.median) / stmt.salary.median;
+      c.push({ label: 'Declared pay matches the statement', state: diff <= 0.15 ? 'pass' : 'warn', note: 'Declared ' + fmt(v.net) + ', statement ' + fmt(stmt.salary.median) + '.' });
+    }
+  }
+  c.push({ label: 'No returned or unpaid debits', state: stmt.bounced ? 'fail' : 'pass', note: stmt.bounced ? stmt.bounced + ' line(s) found.' : 'None found.' });
+  c.push({ label: 'No gambling transactions', state: stmt.gambling ? 'warn' : 'pass', note: stmt.gambling ? stmt.gambling + ' line(s) found.' : 'None found.' });
+  c.push({ label: 'Account stays in credit', state: !stmt.hasBalance ? 'unknown' : stmt.overdraftRows ? 'warn' : 'pass', note: !stmt.hasBalance ? 'The file has no Balance column.' : stmt.overdraftRows ? stmt.overdraftRows + ' row(s) with a negative balance.' : 'No negative balances.' });
+  return c;
+}
+// ==/LOGIC==
+
+// ==EXTRACT==
+// Reads details out of text taken from a document. Pure functions, no DOM, so they can be tested alone.
+const MONEY_SRC = '(?:R\\s?)?(\\d{1,3}(?:[ \\u00a0,]\\d{3})+(?:[.,]\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?)';
+function toNumber(raw) {
+  let t = String(raw).replace(/[\s\u00a0]/g, '');
+  const lc = t.lastIndexOf(','), ld = t.lastIndexOf('.');
+  if (lc >= 0 && ld >= 0) t = lc > ld ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  else if (lc >= 0) t = /,\d{1,2}$/.test(t) ? t.replace(',', '.') : t.replace(/,/g, '');
+  const n = parseFloat(t);
+  return isNaN(n) ? null : n;
+}
+function amountAfter(labelSrc, text) {
+  const m = new RegExp('(?:' + labelSrc + ')[^0-9]{0,80}?' + MONEY_SRC, 'i').exec(text);
+  return m ? toNumber(m[1]) : null;
+}
+const NET_LABEL = '\\bnett?\\s*(?:pay|salary|income|wage|earnings)\\b|take[- ]?home(?:\\s*pay)?|salary\\s*paid';
+const GROSS_LABEL = '\\bgross\\s*(?:pay|salary|earnings|income|remuneration|wage)?\\b|total\\s*earnings|total\\s*income';
+// Most specific wording first, so a heading or an agreement number is never mistaken for the amount.
+const SETTLE_LABELS = ['settlement\\s*(?:amount|balance|figure|value|quote)\\b', 'payout\\s*(?:amount|figure|balance)', '(?:balance|amount)\\s*(?:required\\s*)?to\\s*settle', 'outstanding\\s*balance'];
+function findIDs(text) {
+  const t = String(text), c = new Set();
+  (t.match(/\b\d{13}\b/g) || []).forEach(x => c.add(x));
+  (t.match(/\b(?:\d[ \-]?){12}\d\b/g) || []).forEach(x => { const d = x.replace(/\D/g, ''); if (d.length === 13) c.add(d); });
+  const all = [...c];
+  return { valid: all.filter(x => checkID(x).ok), invalid: all.filter(x => !checkID(x).ok) };
+}
+function extractFromText(key, text) {
+  const out = { fields: {}, ids: [], notes: [] };
+  const t = String(text || '');
+  if (key === 'id' || key === 'licence' || key === 'payslip') {
+    const f = findIDs(t);
+    if (f.valid.length) { out.ids = f.valid; out.fields.idno = f.valid[0]; }
+    else if (f.invalid.length) out.notes.push('A 13-digit number was found but it fails the ID check, so it was not used.');
+  }
+  if (key === 'payslip') {
+    let net = amountAfter(NET_LABEL, t), gross = amountAfter(GROSS_LABEL, t);
+    const sane = x => x !== null && x >= 1000 && x <= 1000000;
+    if (!sane(net)) net = null;
+    if (!sane(gross)) gross = null;
+    if (net && gross && net > gross * 1.02) { net = gross = null; out.notes.push('The pay figures did not add up (net above gross), so none were used.'); }
+    if (net) out.fields.net = Math.round(net);
+    if (gross) out.fields.gross = Math.round(gross);
+  }
+  if (key === 'tradein') {
+    let v = null;
+    for (const lab of SETTLE_LABELS) { v = amountAfter(lab, t); if (v) break; }
+    if (v && v >= 1000 && v <= 5000000) out.fields.settle = Math.round(v);
+  }
+  if (key === 'quote') {
+    const price = amountAfter('(?:vehicle|selling|cash|retail|purchase)\\s*price|price\\s*of\\s*(?:the\\s*)?vehicle', t);
+    if (price && price >= 20000 && price <= 5000000) {
+      out.fields.price = Math.round(price);
+      const dep = amountAfter('\\bdeposit\\b|initial\\s*payment', t);
+      if (dep !== null && dep >= 0 && dep < price) out.fields.deposit = Math.round(dep);
+    } else out.notes.push('No vehicle price could be found on the quote.');
+    const tv = amountAfter('trade[- ]?in\\s*(?:value|allowance|amount)|allowance\\s*for\\s*(?:the\\s*)?trade', t);
+    if (tv && tv >= 1000 && tv <= 5000000) out.fields.tv = Math.round(tv);
+    const st = amountAfter('settlement\\s*(?:owed|owing|amount|balance|figure)|owing\\s*on\\s*(?:the\\s*)?trade|less\\s*settlement', t);
+    if (st && st >= 1000 && st <= 5000000) out.fields.settle = Math.round(st);
+    const term = /(?:term|period)[^0-9]{0,20}(36|48|60|72|84)\s*months/i.exec(t);
+    if (term) out.fields.term = +term[1];
+    const rate = /interest\s*rate[^0-9]{0,30}(\d{1,2}(?:[.,]\d{1,2})?)\s*%/i.exec(t);
+    if (rate) { const r = toNumber(rate[1]); if (r > 0 && r <= 40) out.fields.rate = r; }
+  }
+  return out;
+}
+
+const MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+function isoDate(str) {
+  let m, y, mo, d;
+  if ((m = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = str.match(/^(\d{1,2})[ \-\/]([A-Za-z]{3,9})[ \-\/](\d{2,4})$/))) { d = +m[1]; const k = MON[m[2].slice(0, 3).toLowerCase()]; if (k === undefined) return null; mo = k + 1; y = +m[3]; }
+  else if ((m = str.match(/^(\d{1,2})[ \-\/](\d{1,2})[ \-\/](\d{2,4})$/))) { d = +m[1]; mo = +m[2]; y = +m[3]; }
+  else return null;
+  if (y < 100) y += 2000;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+const STMT_DATE = '(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[ \\-/](?:[A-Za-z]{3,9}|\\d{1,2})[ \\-/]\\d{2,4})';
+const STMT_MONEY = '[-(]?\\s*(?:R\\s?)?-?\\d{1,3}(?:[ \\u00a0,]\\d{3})*[.,]\\d{2}\\)?(?:\\s?(?:CR|DR|Cr|Dr))?';
+function signedMoney(tok) {
+  const neg = /^\s*[-(]/.test(tok) || /R\s*-/.test(tok) || /\bdr\s*$/i.test(tok);
+  const n = toNumber(tok.match(/\d{1,3}(?:[ \u00a0,]\d{3})*[.,]\d{2}/)[0]);
+  return neg ? -n : n;
+}
+// Turns the text lines of a PDF bank statement into CSV that parseStatement already understands.
+function statementCSVFromLines(lines) {
+  const re2 = new RegExp('^\\s*' + STMT_DATE + '\\s+(.*?)\\s+(' + STMT_MONEY + ')\\s+(' + STMT_MONEY + ')\\s*$');
+  const re1 = new RegExp('^\\s*' + STMT_DATE + '\\s+(.*?)\\s+(' + STMT_MONEY + ')\\s*$');
+  const rows = []; let prev = null, determined = 0;
+  for (const line of lines) {
+    let m = re2.exec(line), amt, bal = null, sure = false;
+    if (m) { amt = signedMoney(m[3]); bal = signedMoney(m[4]); }
+    else if ((m = re1.exec(line))) amt = signedMoney(m[3]);
+    else continue;
+    const iso = isoDate(m[1]);
+    if (!iso) continue;
+    if (amt < 0 || /\bcr\s*$/i.test(m[3])) sure = true;
+    if (bal !== null && prev !== null) {
+      const d = Math.round((bal - prev) * 100) / 100;
+      if (Math.abs(Math.abs(d) - Math.abs(amt)) < 0.015) { amt = d; sure = true; }
+    }
+    if (bal !== null) prev = bal;
+    if (sure) determined++;
+    rows.push([iso, '"' + m[2].trim().replace(/"/g, '""') + '"', amt.toFixed(2), bal === null ? '' : bal.toFixed(2)]);
+  }
+  if (rows.length < 5 || determined < rows.length * 0.5) return { ok: false, count: rows.length };
+  return { ok: true, count: rows.length, csv: 'Date,Description,Amount,Balance\n' + rows.map(r => r.join(',')).join('\n') };
+}
+// ==/EXTRACT==
+
+const $ = id => document.getElementById(id);
+const DOCS = [
+  { key: 'id', label: 'ID document', hint: 'Smart card or green barcoded ID, front and back. The ID number is read and filled in.' },
+  { key: 'licence', label: "Driver's licence", hint: 'Valid card, front and back. The ID number is read as a cross-check.' },
+  { key: 'address', label: 'Proof of address', hint: 'Not older than three months' },
+  { key: 'statements', label: 'Bank statements', hint: 'Last three months. A CSV or a PDF with selectable text is read automatically.' },
+  { key: 'payslip', label: 'Latest payslip', hint: 'Take-home and gross pay are read and filled in, then cross-checked against the statement.' },
+  { key: 'quote', label: 'Vehicle quote', hint: 'Dealer quotation or offer to purchase. Vehicle price, deposit, trade-in, settlement, term and rate are read and filled in.', optional: true },
+  { key: 'tradein', label: 'Trade-in settlement letter', hint: 'Needed only when a trade-in is owed on. The settlement amount is read.', cond: () => num('settle') > 0 }
+];
+const state = { docs: {}, stmt: null, sample: false, auto: {}, found: {}, touched: {} };
+const num = id => { const x = parseFloat($(id).value); return isNaN(x) ? 0 : x; };
+const readInputs = () => ({ net: num('net'), gross: num('gross'), debt: num('debt'), price: num('price'), deposit: num('deposit'), tv: num('tv'), settle: num('settle'), term: +$('term').value, rate: num('rate') });
+
+function setDoc(key, info) { state.docs[key] = info; renderDocs(); update(); }
+
+const FIELD_LABEL = { idno: 'ID number', net: 'take-home pay', gross: 'gross pay', debt: 'other monthly instalments', price: 'vehicle price', deposit: 'deposit', tv: 'trade-in value', settle: 'trade-in settlement', term: 'term', rate: 'interest rate' };
+const SRC_LABEL = { id: 'ID document', licence: "driver's licence", payslip: 'payslip', statements: 'bank statement', quote: 'vehicle quote', tradein: 'settlement letter' };
+// When two documents could fill the same field, the higher number wins over an earlier automatic fill.
+const PRI = { idno: { id: 3, licence: 2, payslip: 1 }, net: { payslip: 2, statements: 1 }, gross: { payslip: 1 }, debt: { statements: 1 }, price: { quote: 1 }, deposit: { quote: 1 }, tv: { quote: 1 }, settle: { tradein: 3, quote: 2 }, term: { quote: 1 }, rate: { quote: 1 } };
+const showField = (f, v) => f === 'idno' ? String(v) : f === 'term' ? v + ' months' : f === 'rate' ? v + '%' : fmt(v);
+
+function unmark(f) {
+  const el = $(f); if (!el) return;
+  el.classList.remove('autofilled'); el.removeAttribute('title');
+  const t = el.parentElement.querySelector('.auto-tag'); if (t) t.remove();
+}
+function clearAuto(f) { delete state.auto[f]; unmark(f); }
+function clearAllAuto() { Object.keys(state.auto).forEach(unmark); state.auto = {}; state.found = {}; }
+function mark(f, src) {
+  const el = $(f); el.classList.add('autofilled'); el.title = 'Filled from the ' + SRC_LABEL[src];
+  let t = el.parentElement.querySelector('.auto-tag');
+  if (!t) { t = document.createElement('span'); t.className = 'auto-tag'; el.parentElement.appendChild(t); }
+  t.textContent = 'Filled from the ' + SRC_LABEL[src];
+}
+// Fills empty fields, and fields that were only ever filled automatically. Never overwrites something the user typed.
+function applyFills(src, fields) {
+  const filled = [], clashes = [];
+  Object.keys(fields).forEach(f => {
+    const val = fields[f], el = $(f), cur = el.value.trim(), a = state.auto[f], pri = (PRI[f] || {})[src] || 1;
+    const same = f === 'idno' ? cur.replace(/\s/g, '') === String(val) : cur !== '' && Math.abs(num(f) - val) < 1;
+    if (same) return;
+    const userSet = cur !== '' && !a && (f === 'term' || f === 'rate' ? !!state.touched[f] : true); // the page's own defaults for term and rate are not user entries
+    if (!userSet || (a && pri >= a.pri)) { el.value = val; state.auto[f] = { src, pri }; mark(f, src); filled.push(f); }
+    else clashes.push({ f, val, cur });
+  });
+  return { filled, clashes };
+}
+
+async function handleFile(key, file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const allowed = key === 'statements' ? ['csv', 'pdf', 'png', 'jpg', 'jpeg'] : ['pdf', 'png', 'jpg', 'jpeg'];
+  const base = { name: file.name, size: file.size };
+  if (state.found.idno) delete state.found.idno[key];
+  if (!allowed.includes(ext)) return setDoc(key, { ...base, status: 'bad', note: 'A .' + ext + ' file is not accepted. Use ' + allowed.join(', ') + '.' });
+  if (file.size === 0) return setDoc(key, { ...base, status: 'bad', note: 'The file is empty.' });
+  if (file.size > 10 * 1024 * 1024) return setDoc(key, { ...base, status: 'bad', note: 'The file is over 10 MB.' });
+  try {
+    if (ext === 'pdf') {
+      const head = await file.slice(0, 5).text();
+      if (head !== '%PDF-') return setDoc(key, { ...base, status: 'bad', note: 'This is not a valid PDF.' });
+      return await readDocument(key, file, base, 'pdf', '');
+    }
+    if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') {
+      let w = 0, h = 0;
+      try { const bmp = await createImageBitmap(file); w = bmp.width; h = bmp.height; bmp.close && bmp.close(); } catch (e) {}
+      const small = w && Math.min(w, h) < 900 ? 'Image is ' + w + '×' + h + ' px. It may be too small to read. Retake it closer. ' : '';
+      return await readDocument(key, file, base, 'image', small);
+    }
+    if (ext === 'csv') return loadCSV(await file.text(), file.name, file.size, '');
+  } catch (e) {
+    return setDoc(key, { ...base, status: 'bad', note: 'The file could not be read.' });
+  }
+}
+async function readDocument(key, file, base, kind, warn) {
+  if (key === 'statements') {
+    state.stmt = null;
+    if (kind !== 'pdf') return setDoc(key, { ...base, status: 'warn', note: warn + 'Image received. Photos of statements are not read. Upload the CSV or the PDF from your bank.' });
+    setDoc(key, { ...base, status: 'warn', note: 'Reading the PDF…' });
+    try {
+      const conv = statementCSVFromLines(await pdfLines(await getPdf(file)));
+      if (conv.ok) return loadCSV(conv.csv, base.name, base.size, 'Read from the PDF. ');
+    } catch (e) { return setDoc(key, { ...base, status: 'warn', note: readFailure(e) + ' Upload the CSV for the income check.' }); }
+    return setDoc(key, { ...base, status: 'warn', note: 'PDF received, but its layout could not be read (it may be a scan). Upload the CSV for the income check.' });
+  }
+  if (key === 'address') return setDoc(key, { ...base, status: kind === 'pdf' || !warn ? 'ok' : 'warn', note: (kind === 'pdf' ? 'PDF received.' : warn + 'Image received.') });
+  setDoc(key, { ...base, status: 'warn', note: 'Reading the document…' });
+  let text = '';
+  try {
+    if (kind === 'pdf') {
+      const pdf = await getPdf(file);
+      text = (await pdfLines(pdf)).join('\n');
+      if (text.replace(/\s/g, '').length < 40) {
+        setDoc(key, { ...base, status: 'warn', note: 'No text layer, so reading it as a scan. The first time takes a moment…' });
+        text = await ocrText(await pdfCanvases(pdf, 2));
+      }
+    } else {
+      setDoc(key, { ...base, status: 'warn', note: 'Reading text from the image. The first time takes a moment…' });
+      text = await ocrText([file]);
+    }
+  } catch (e) {
+    return setDoc(key, { ...base, status: 'warn', note: warn + 'Received. ' + readFailure(e) + ' Enter the details above.' });
+  }
+  const ex = extractFromText(key, text);
+  if (ex.ids.length) state.found.idno = { ...(state.found.idno || {}), [key]: ex.ids[0] };
+  const r = applyFills(key, ex.fields);
+  const parts = [];
+  if (r.filled.length) parts.push('Filled in ' + r.filled.map(f => FIELD_LABEL[f] + ' (' + showField(f, ex.fields[f]) + ')').join(', ') + '.');
+  else if (Object.keys(ex.fields).length && !r.clashes.length) parts.push('Read ' + Object.keys(ex.fields).map(f => FIELD_LABEL[f] + ' (' + showField(f, ex.fields[f]) + ')').join(', ') + ', which matches what is entered.');
+  r.clashes.forEach(c => parts.push('Shows ' + FIELD_LABEL[c.f] + ' ' + showField(c.f, c.val) + ' but ' + c.cur + ' is entered. Your entry was left as it is.'));
+  ex.notes.forEach(n => parts.push(n));
+  if (!parts.length) parts.push('Received, but no details could be read. Enter them above.');
+  setDoc(key, { ...base, status: r.clashes.length || ex.notes.length ? 'warn' : 'ok', note: warn + parts.join(' ') });
+}
+function loadCSV(text, name, size, prefix) {
+  const res = parseStatement(text);
+  const base = { name, size };
+  if (!res.ok) { state.stmt = null; return setDoc('statements', { ...base, status: 'bad', note: res.error }); }
+  state.stmt = analyzeStatement(res.tx);
+  const s = state.stmt;
+  const short = s.days < 80;
+  const fills = {};
+  if (s.salary) fills.net = Math.round(s.salary.median);
+  const detDebt = Math.round(s.recurring.filter(x => x.debt).reduce((acc, x) => acc + x.median, 0));
+  if (detDebt > 0) fills.debt = detDebt;
+  const r = applyFills('statements', fills);
+  setDoc('statements', { ...base, status: short ? 'warn' : 'ok', note: (prefix || '') + 'Read ' + s.txCount + ' transactions over ' + s.days + ' days.' + (short ? ' Three months are needed.' : '') + (r.filled.length ? ' Filled in ' + r.filled.map(f => FIELD_LABEL[f] + ' (' + showField(f, fills[f]) + ')').join(', ') + ' from the statement.' : '') });
+}
+
+// ---- browser-only readers: PDF text (bundled pdf.js) and OCR for photos and scans ----
+const _scripts = {};
+function loadScript(src) {
+  return _scripts[src] || (_scripts[src] = new Promise((res, rej) => {
+    const el = document.createElement('script'); el.src = src; el.onload = res;
+    el.onerror = () => { delete _scripts[src]; rej(new Error('Could not load ' + src)); };
+    document.head.appendChild(el);
+  }));
+}
+const PDFJS_SOURCES = [
+  { lib: 'vendor/pdf.min.js', worker: 'vendor/pdf.worker.min.js' },
+  { lib: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js' }
+];
+async function getPdf(file) {
+  if (!window.pdfjsLib) {
+    for (const src of PDFJS_SOURCES) {
+      try { await loadScript(src.lib); if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc = src.worker; break; } } catch (e) {}
+    }
+    if (!window.pdfjsLib) throw new Error('PDF_READER_MISSING');
+  }
+  return pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+}
+function readFailure(e) {
+  const m = e && e.message || '';
+  if (m === 'PDF_READER_MISSING') return 'The PDF reader could not be loaded. Put the vendor folder next to this page, or connect to the internet, then upload again.';
+  if (/Could not load/.test(m)) return 'The image reader could not be downloaded. It needs internet the first time.';
+  return 'The details could not be read automatically.';
+}
+async function pdfLines(doc) {
+  const lines = [];
+  for (let p = 1; p <= Math.min(doc.numPages, 12); p++) {
+    const tc = await (await doc.getPage(p)).getTextContent();
+    const items = tc.items.filter(i => i.str && i.str.trim()).map(i => ({ s: i.str, x: i.transform[4], y: i.transform[5], w: i.width || 0 }));
+    items.sort((a, b) => b.y - a.y || a.x - b.x);
+    const rows = [];
+    items.forEach(it => { const last = rows[rows.length - 1]; if (last && Math.abs(last.y - it.y) <= 3) last.items.push(it); else rows.push({ y: it.y, items: [it] }); });
+    rows.forEach(r => {
+      r.items.sort((a, b) => a.x - b.x);
+      let line = '', end = null;
+      r.items.forEach(it => { if (end !== null && it.x - end > 1) line += ' '; line += it.s; end = it.x + it.w; });
+      lines.push(line.replace(/[ \t]{2,}/g, ' ').trim());
+    });
+  }
+  return lines;
+}
+async function pdfCanvases(doc, max) {
+  const out = [];
+  for (let p = 1; p <= Math.min(doc.numPages, max); p++) {
+    const page = await doc.getPage(p), vp = page.getViewport({ scale: 2 });
+    const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    out.push(cv);
+  }
+  return out;
+}
+const OCR = {
+  lib: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  worker: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+  core: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
+  lang: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int'
+};
+async function ocrText(sources) {
+  await loadScript(OCR.lib);
+  const w = await Tesseract.createWorker('eng', 1, { workerPath: OCR.worker, corePath: OCR.core, langPath: OCR.lang });
+  try { let t = ''; for (const src of sources) t += (await w.recognize(src)).data.text + '\n'; return t; }
+  finally { await w.terminate(); }
+}
+
+function renderDocs() {
+  $('doc-list').innerHTML = shownDocs().map(d => {
+    const i = state.docs[d.key];
+    const pill = !i ? '<span class="pill none">Missing</span>' : i.status === 'ok' ? '<span class="pill good">Received</span>' : i.status === 'warn' ? '<span class="pill warn">Check</span>' : '<span class="pill bad">Rejected</span>';
+    const acc = d.key === 'statements' ? '.csv,.pdf,.png,.jpg,.jpeg' : '.pdf,.png,.jpg,.jpeg';
+    return '<li class="doc" data-key="' + d.key + '"><div class="meta"><div class="name">' + esc(d.label) + (d.optional ? ' <span class="muted">(optional)</span>' : '') + '</div><div class="note">' +
+      (i ? esc(i.name) + (i.size ? ' · ' + (i.size / 1024).toFixed(0) + ' KB' : '') + ' · ' + esc(i.note) : esc(d.hint)) +
+      '</div></div><div class="acts">' + pill + '<label class="btn" for="f-' + d.key + '">' + (i ? 'Replace' : 'Upload') + '</label><input type="file" id="f-' + d.key + '" accept="' + acc + '" data-key="' + d.key + '"></div></li>';
+  }).join('');
+}
+
+function bandInfo(m) {
+  if (!m) return { cls: 'none', text: 'Enter pay and price' };
+  return m.level === 2 ? { cls: 'good', text: 'Likely' } : m.level === 1 ? { cls: 'warn', text: 'Borderline' } : { cls: 'bad', text: 'Unlikely as it stands' };
+}
+function fixesHTML(m) {
+  if (!m) return '';
+  if (!m.fixes.length) return '<p class="small muted">Nothing to fix on these numbers.</p>';
+  return '<ul class="fixes">' + m.fixes.map(f => '<li class="' + (f.flag ? 'flag' : '') + '"><b>' + esc(f.title) + '</b><span class="small muted">' + esc(f.detail) + '</span></li>').join('') + '</ul>';
+}
+function shownDocs() { return DOCS.filter(d => !d.cond || d.cond()); }
+function requiredDocs() { return shownDocs().filter(d => !d.optional); }
+function completeness() {
+  const req = requiredDocs(); const got = req.filter(d => state.docs[d.key] && state.docs[d.key].status !== 'bad').length;
+  return { got, total: req.length };
+}
+
+function update() {
+  const v = readInputs();
+  const idRes = checkID($('idno').value);
+  $('id-msg').textContent = idRes ? idRes.msg : '';
+  $('id-msg').style.color = idRes ? (idRes.ok ? 'var(--good)' : 'var(--bad)') : '';
+  const m = computeModel(v, state.stmt);
+  const caps = m ? null : affordCaps(v, state.stmt);
+  const b = m ? bandInfo(m) : caps ? { cls: 'none', text: 'Add a vehicle price' } : bandInfo(null), comp = completeness();
+  const resultEl = $('buyer-result');
+  resultEl.innerHTML =
+    '<div class="label-up">Indicative result</div>' +
+    '<div class="band ' + b.cls + '"><span class="small">Chance the bank approves</span><span class="big">' + b.text + '</span>' +
+    (m && m.flagged ? '<span class="small">Lowered one step because of flags on the statement.</span>' : '') + '</div>' +
+    (m ? '<div class="kv small"><div class="muted">Vehicles likely up to</div><div class="num">' + fmt(m.maxLikely) + '</div>' +
+      '<div class="muted">Borderline up to</div><div class="num">' + fmt(m.maxBorder) + '</div>' +
+      '<div class="muted">Financed amount</div><div class="num">' + fmt(m.financed) + '</div>' +
+      '<div class="muted">Instalment</div><div class="num">' + fmt(m.inst) + '</div>' +
+      '<div class="muted">Insurance allowance</div><div class="num">' + fmt(m.ins) + '</div></div>' : (caps ? '<p class="small muted">Add a vehicle price, or upload the dealer quote, to see the band. On the income and debts found so far, vehicles up to about ' + fmt(caps.likely) + ' look likely and up to about ' + fmt(caps.border) + ' borderline.</p>' : '<p class="small muted">Add take-home pay and a vehicle price, or load a sample.</p>')) +
+    '<div><h3>What would improve it</h3><div style="margin-top:8px">' + fixesHTML(m) + '</div></div>' +
+    '<div><div class="small muted" style="display:flex;justify-content:space-between"><span>Documents</span><span class="num">' + comp.got + ' of ' + comp.total + '</span></div><div class="bar" style="margin-top:6px"><i style="width:' + (comp.total ? comp.got / comp.total * 100 : 0) + '%"></i></div></div>' +
+    '<p class="small muted">Indicative only. The bank runs its own affordability assessment and makes the final decision.</p>';
+  renderStatement();
+  renderDealer(v, m, idRes, b, comp);
+}
+
+function renderStatement() {
+  const s = state.stmt, el = $('stmt-body');
+  if (!s) { el.className = 'muted small'; el.textContent = 'Upload a bank statement (a CSV, or a PDF with selectable text) and it is read here. A CSV needs the columns Date, Description and Amount (or Debit and Credit), with Balance if you have it.'; return; }
+  el.className = '';
+  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:14px">' +
+    '<div class="kv small"><div class="muted">Period</div><div class="num">' + s.first.toISOString().slice(0, 10) + ' to ' + s.last.toISOString().slice(0, 10) + '</div>' +
+    '<div class="muted">Salary found</div><div class="num">' + (s.salary ? esc(s.salary.name) + ' · ' + fmt(s.salary.median) : 'None') + '</div>' +
+    '<div class="muted">Returned or unpaid debits</div><div class="num">' + s.bounced + '</div>' +
+    '<div class="muted">Gambling lines</div><div class="num">' + s.gambling + '</div>' +
+    '<div class="muted">Rows with negative balance</div><div class="num">' + (s.hasBalance ? s.overdraftRows : 'n/a') + '</div></div>' +
+    '<div><div class="label-up" style="margin-bottom:6px">Recurring debit orders</div><div class="scroll"><table><thead><tr><th>Payment</th><th class="r">Per month</th><th>Type</th></tr></thead><tbody>' +
+    (s.recurring.length ? s.recurring.map(r => '<tr><td>' + esc(r.name) + '</td><td class="r num">' + fmt(r.median) + '</td><td>' + (r.debt ? '<span class="pill warn">Debt</span>' : '<span class="pill none">Other</span>') + '</td></tr>').join('') : '<tr><td colspan="3" class="muted">None found.</td></tr>') +
+    '</tbody></table></div></div></div>';
+}
+
+let sentMsg = '';
+function renderDealer(v, m, idRes, b, comp) {
+  const checks = buildChecks(v, state.stmt, idRes, state.found);
+  const hasFail = checks.some(c => c.state === 'fail');
+  const ready = comp.got === comp.total && !hasFail && !!state.stmt;
+  const pillFor = s => s === 'pass' ? '<span class="pill good">Pass</span>' : s === 'warn' ? '<span class="pill warn">Review</span>' : s === 'fail' ? '<span class="pill bad">Fail</span>' : '<span class="pill none">Unknown</span>';
+  const rows = m ? [
+    ['Income used', fmt(m.net) + ' (' + m.netSource + ')'],
+    ['Existing monthly debt', fmt(m.existing)],
+    ['Living-expense allowance (placeholder)', fmt(m.expenses)],
+    ['Left over before the car', fmt(m.disc)],
+    ['Amount financed', fmt(m.financed)],
+    ['Instalment at ' + v.rate + '% over ' + v.term + ' months', fmt(m.inst)],
+    ['Insurance allowance (placeholder)', fmt(m.ins)],
+    ['Car cost per month', fmt(m.cost)],
+    ['Share of left-over income used', isFinite(m.ratio) ? pct(m.ratio) : 'No income left'],
+    ['Debt to income including the car', pct(m.dti)]
+  ] : [];
+  $('dealer-body').innerHTML =
+    '<div class="two">' +
+      '<div class="card"><div class="label-up">File summary</div><div class="band ' + b.cls + '"><span class="small">Band</span><span class="big">' + b.text + '</span></div>' +
+        '<div class="kv small"><div class="muted">Documents received</div><div class="num">' + comp.got + ' of ' + comp.total + '</div><div class="muted">Pack status</div><div>' + (ready ? '<span class="pill good">Ready to send</span>' : '<span class="pill warn">Not ready</span>') + '</div></div>' +
+        '<div class="btn-row"><button class="btn primary" id="send-pack" type="button"' + (ready ? '' : ' disabled') + '>Send pack to lenders (simulated)</button></div>' +
+        '<p class="note-box small" id="send-msg"' + (sentMsg ? '' : ' hidden') + '>' + esc(sentMsg) + '</p>' +
+        (ready ? '' : '<p class="small muted">The pack unlocks when every required document is received, a statement has been read and no check has failed.</p>') +
+      '</div>' +
+      '<div class="card"><h2>Checks</h2><ul class="checks">' + checks.map(c => '<li>' + pillFor(c.state) + '<span>' + esc(c.label) + '</span><span class="note">' + esc(c.note) + '</span></li>').join('') + '</ul></div>' +
+    '</div>' +
+    '<div class="two">' +
+      '<div class="card"><h2>Affordability workings</h2>' + (m ? '<div class="kv small">' + rows.map(r => '<div class="muted">' + esc(r[0]) + '</div><div class="num">' + esc(r[1]) + '</div>').join('') + '</div>' : '<p class="small muted">Add take-home pay and a vehicle price to see the workings.</p>') +
+        '<p class="small muted">Likely means up to half of left-over income and 55% debt to income. Borderline means up to 75% and 70%. These cut-offs are starting guesses.</p></div>' +
+      '<div class="card"><h2>Tell the buyer to fix</h2>' + (m ? fixesHTML(m) : '<p class="small muted">Nothing yet.</p>') + '</div>' +
+    '</div>' +
+    '<div class="card"><h2>Documents</h2><div class="scroll"><table><thead><tr><th>Document</th><th>Status</th><th>Note</th></tr></thead><tbody>' +
+      shownDocs().map(d => { const i = state.docs[d.key]; return '<tr><td>' + esc(d.label) + (d.optional ? ' (optional)' : '') + '</td><td>' + (!i ? '<span class="pill none">Missing</span>' : i.status === 'ok' ? '<span class="pill good">Received</span>' : i.status === 'warn' ? '<span class="pill warn">Check</span>' : '<span class="pill bad">Rejected</span>') + '</td><td class="small muted">' + (i ? esc(i.name + ' · ' + i.note) : '') + '</td></tr>'; }).join('') +
+    '</tbody></table></div></div>';
+}
+
+function setInputs(o) { Object.keys(o).forEach(k => { $(k).value = o[k]; }); }
+function resetState() { state.docs = {}; state.stmt = null; sentMsg = ''; clearAllAuto(); state.touched = {}; }
+function loadSample(variant) {
+  resetState();
+  state.sample = true;
+  setInputs({ idno: makeSampleID(), net: 28400, gross: 36500, debt: 0, price: 349900, deposit: 15000, tv: 60000, settle: 78000, term: 72, rate: 12.5 });
+  ['id', 'licence', 'address', 'payslip', 'tradein'].forEach(k => {
+    state.docs[k] = { name: { id: 'id_front_back.jpg', licence: 'licence.jpg', address: 'municipal_account.pdf', payslip: 'payslip_latest.pdf', tradein: 'settlement_letter.pdf' }[k] + ' (sample)', size: 0, status: 'ok', note: 'Sample document.' };
+  });
+  const csv = makeSampleCSV(variant);
+  loadCSV(csv, 'statement_3_months.csv (sample)', csv.length, '');
+  $('banner-text').textContent = 'Example data is loaded' + (variant === 'flags' ? ' with red flags on the statement.' : '.') + ' Replace it with real figures or clear it.';
+  $('banner').hidden = false;
+}
+function clearAll() {
+  resetState(); state.sample = false;
+  ['idno', 'net', 'gross', 'debt', 'price', 'deposit', 'tv', 'settle'].forEach(k => { $(k).value = ''; });
+  $('term').value = '72'; $('rate').value = '12.5';
+  $('banner-text').textContent = 'Everything is cleared. Enter your own figures and upload documents, or load a sample.';
+  renderDocs(); update();
+}
+
+function showView(v) {
+  ['buyer', 'dealer'].forEach(k => {
+    $('view-' + k).hidden = k !== v;
+    $('tab-' + k).setAttribute('aria-selected', k === v ? 'true' : 'false');
+  });
+}
+document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b) showView(b.dataset.view); });
+$('doc-list').addEventListener('change', e => { if (e.target.matches('input[type=file]') && e.target.files[0]) handleFile(e.target.dataset.key, e.target.files[0]); });
+$('doc-list').addEventListener('dragover', e => { const li = e.target.closest('.doc'); if (li) { e.preventDefault(); li.classList.add('drag'); } });
+$('doc-list').addEventListener('dragleave', e => { const li = e.target.closest('.doc'); if (li) li.classList.remove('drag'); });
+$('doc-list').addEventListener('drop', e => { const li = e.target.closest('.doc'); if (li) { e.preventDefault(); li.classList.remove('drag'); if (e.dataTransfer.files[0]) handleFile(li.dataset.key, e.dataTransfer.files[0]); } });
+['idno', 'net', 'gross', 'debt', 'price', 'deposit', 'tv', 'settle', 'term', 'rate'].forEach(id => $(id).addEventListener('input', () => { clearAuto(id); state.touched[id] = true; if (id === 'settle') renderDocs(); update(); }));
+$('load-clean').addEventListener('click', () => loadSample('clean'));
+$('load-flags').addEventListener('click', () => loadSample('flags'));
+$('clear-all').addEventListener('click', clearAll);
+$('dealer-body').addEventListener('click', e => {
+  if (e.target.id === 'send-pack') {
+    sentMsg = 'Simulated. In production this would send one structured file, with the verified income and the checks above, to the lenders the dealer chooses. Nothing has left this page.';
+    update();
+  }
+});
+
+loadSample('clean');
+</script>
+
+</body></html>

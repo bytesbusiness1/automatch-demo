@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AutoMatch · Know if the price is right</title>
+  <meta name="description" content="Search any car in South Africa and see whether the price is worth it, plus better second-hand alternatives.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="demo-bar">Demo build · listings, dealers and prices are illustrative, not live stock</div>
+
+  <header class="topbar">
+    <a class="logo" href="#/">autom<em>a</em>tch</a>
+    <nav class="topnav">
+      <a href="#/" data-nav="home">Home</a>
+      <a href="#/search?q=" data-nav="search">Browse all</a>
+      <a href="#/how" data-nav="how">How it works</a>
+    </nav>
+    <div class="topright">
+      <a class="btn-finance" href="/finance-check.html">Pre-evaluate your finances</a>
+      <span class="pill-demo">South Africa</span>
+    </div>
+  </header>
+
+  <div class="catbar">
+    <div class="cats" id="cats">
+      <a href="#/search?q=" data-seg="">All cars</a>
+      <a href="#/search?q=&segment=bakkie" data-seg="bakkie">Bakkies</a>
+      <a href="#/search?q=&segment=hatchback" data-seg="hatchback">Hatchbacks</a>
+      <a href="#/search?q=&segment=suv" data-seg="suv">SUVs</a>
+    </div>
+    <div class="searchwrap">
+      <form id="searchForm" autocomplete="off">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Search a car, e.g. Hilux, bakkie, used Swift under 150000" aria-label="Search cars">
+      </form>
+      <div class="suggest" id="suggest" hidden></div>
+    </div>
+  </div>
+
+  <main id="app" aria-live="polite"></main>
+
+  <footer class="foot">
+    <span>autom<em>a</em>tch · demo</span>
+    <span>Price verdicts are a heuristic for demonstration, not a valuation.</span>
+  </footer>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>
